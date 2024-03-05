@@ -37,13 +37,17 @@ blogRouter.post('/', async c => {
         datasourceUrl: c.env.DATABASE_URL
     }).$extends(withAccelerate())
 
-    const body = await c.req.json();
-    const {success} = createBlogInput.safeParse(body);
+    let body = await c.req.json();
+    body = {
+        ...body,
+        id: c.get('userId')
+    }
+    const something = createBlogInput.safeParse(body);
 
-    if(!success){
+    if(!something.success){
         c.status(403);
         return c.json({
-            error: 'Invalid payload'
+            error: something
         })
     }
 
@@ -102,9 +106,18 @@ blogRouter.get("/bulk", async c => {
         datasourceUrl: c.env.DATABASE_URL
     }).$extends(withAccelerate())
 
-    const body = await c.req.json();
-
-    const blogs = await prisma.blog.findMany();
+    const blogs = await prisma.blog.findMany({
+        select: {
+            title: true,
+            content: true,
+            id: true,
+            author: {
+                select: {
+                    name: true
+                }
+            }
+        }
+    });
 
     return c.json({
         blogs
@@ -122,6 +135,16 @@ blogRouter.get('/:id', async c => {
         const blog = await prisma.blog.findFirst({
             where: {
                 id: Number(id)
+            },
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                author: {
+                    select: {
+                        name: true
+                    }
+                }
             }
         })
 
