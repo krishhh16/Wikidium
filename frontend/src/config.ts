@@ -1,0 +1,1 @@
+export const BACKEND_URL =  'https://backend1.ktmedia23.workers.dev'
