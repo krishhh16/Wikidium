@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { verify } from "hono/jwt";
+import { CreateBlogInput, UpdateBlogInput, createBlogInput, updateBlogInput } from "@krishhh/medium-common";
+
 export const blogRouter = new Hono<{
     Bindings: {
         DATABASE_URL: string;
@@ -12,13 +14,22 @@ export const blogRouter = new Hono<{
     }
 }>();
 
+
+
 blogRouter.use("/*", async (c, next) =>{ 
+    try {
     const token = c.req.header('authorization') || "";
     const user = await verify(token, c.env.JWT_SECRET)
     if (user) {
         c.set('userId', user.id)
     }
-    await next();
+    await next();}
+    catch(e) {
+        c.status(403);
+        return c.json({
+            msg: "You are not logged in, aka you are an asshole"
+        })
+    }
 })
 
 blogRouter.post('/', async c => {
@@ -27,6 +38,14 @@ blogRouter.post('/', async c => {
     }).$extends(withAccelerate())
 
     const body = await c.req.json();
+    const {success} = createBlogInput.safeParse(body);
+
+    if(!success){
+        c.status(403);
+        return c.json({
+            error: 'Invalid payload'
+        })
+    }
 
     const blog = await prisma.blog.create({
         data: {
@@ -47,6 +66,14 @@ blogRouter.put("/", async c => {
     }).$extends(withAccelerate())
 
     const body = await c.req.json();
+    const {success} = updateBlogInput.safeParse(body);
+
+    if(!success){
+        c.status(403);
+        return c.json({
+            error: 'Invalid payload'
+        })
+    }
     try {
     const blog = await prisma.blog.update({
         where: {
